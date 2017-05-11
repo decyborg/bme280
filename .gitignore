@@ -1,0 +1,11 @@
+#
+# Initial gitignore for kernel modules
+#
+
+*.o
+*.ko
+*.mod.*
+*.order
+*.symvers
+*.cmd
+*.tmp_versions
