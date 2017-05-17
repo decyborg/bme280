@@ -19,4 +19,29 @@
  * */
 
 
+/* BME280 registers - for details please refer to the device DS */
+#define R_BME280_CALIB00		0x88
+#define R_BME280_CALIB25		0xA1
+#define R_BME280_CHIP_ID		0xD0
+#define R_BME280_RESET			0xE0
+#define R_BME280_CALIB26			0xE1
+#define R_BME280_CALIB41			0xF0
+#define R_BME280_CTRL_HUM			0xF2
+#define R_BME280_STATUS				0xF3
+#define R_BME280_CTRL_MEAS		0xF4
+#define R_BME280_CONFIG			0xF5
+#define R_BME280_PRESS_MSB		0xF7
+#define R_BME280_PRESS_LSB		0xF8
+#define R_BME280_PRESS_XLSB			0xF9
+#define R_BME280_TEMP_MSB			0xFA
+#define R_BME280_TEMP_LSB			0xFB
+#define R_BME280_TEMP_XLSB			0xFC
+#define R_BME280_HUM_MSB		0xFD
+#define R_BME280_HUM_LSB		0xFE
+
+/* BME280 definitions */
+#define BME280_CHIP_ID			0x60
+#define BME280_I2C_ADDR			0x77
+
+/* IOCTL Commands definitions */
 
