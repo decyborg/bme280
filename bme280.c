@@ -35,12 +35,35 @@
  * 
  * */
 struct bme280_calibration_t{
-
+	unsigned short dig_T1;
+      	signed short dig_T2;
+	signed short dig_T3;
+	unsigned short dig_P1;
+	signed short dig_P2;
+	signed short dig_P3;
+	signed short dig_P4;
+	signed short dig_P5;
+	signed short dig_P6;
+	signed short dig_P7;
+	signed short dig_P8;
+	signed short dig_P9;
+	unsigned char dig_H1;
+	signed short dig_H2;
+	unsigned char dig_H3;
+	signed short dig_H4;
+	signed short dig_H5;
+	signed char dig_H6;	
 };
 
 /* Structure that holds bme280 configuration */
 struct bme280_configuration_t{
-
+	unsigned char t_sb;
+	unsigned char filter;
+	unsigned char spi3w_en;
+	unsigned char osrs_t;
+	unsigned char osrs_p;
+	unsigned char mode;
+	unsigned char osrs_h;	
 };
 
 /* Structure that holds configuration and client data for the device */
@@ -52,9 +75,19 @@ struct bme280_data_t{
 
 /* Global variables */
 static struct bme280_calibration_t bme280_calibration;
-static struct bme280_configuration_t bme280_configuration;
+static struct bme280_configuration_t bme280_configuration =
+					{
+					.t_sb = 0,
+					.filter = 0,
+					.spi3w_en = 0,
+					.osrs_t = 1,
+					.osrs_p = 1,
+					.mode = 0,
+					.osrs_h = 1
+					};
 struct i2c_client *bme280_client;
-static struct bme280_data_t bme280_data{
+static struct bme280_data_t bme280_data =
+					{
 					.client = bme280_client,
 					.cal_data = &bme280_calibration,
 					.cfg_data = &bme280_configuration
