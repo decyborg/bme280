@@ -34,21 +34,31 @@
  * is populated in the probe function. 
  * 
  * */
-struct bme280_calibration{
+struct bme280_calibration_t{
 
 };
 
 /* Structure that holds bme280 configuration */
-struct bme280_configuration{
+struct bme280_configuration_t{
 
 };
 
 /* Structure that holds configuration and client data for the device */
-static struct bme280_data{
+struct bme280_data_t{
 	struct i2c_client *client;
-	struct bme280_calibration *cal_data;
-	struct bme280_configuration *cfg_data;
+	struct bme280_calibration_t *cal_data;
+	struct bme280_configuration_t *cfg_data;
 };
+
+/* Global variables */
+static struct bme280_calibration_t bme280_calibration;
+static struct bme280_configuration_t bme280_configuration;
+struct i2c_client *bme280_client;
+static struct bme280_data_t bme280_data{
+					.client = bme280_client,
+					.cal_data = &bme280_calibration,
+					.cfg_data = &bme280_configuration
+					};
 
 /*
  * When the device is probed this function performs the following actions:
@@ -60,15 +70,31 @@ static struct bme280_data{
  * */
 static int __devinit bme280_probe(struct i2c_client *client, const struct i2c_device_id *id){
 	
+	int tmp, client_id;
+	struct i2c_adapter *adapter;
+	
 	/* Check if adapter supports the functionality we need */
+	adapter = to_12c_adapter(client->dev.parent);
+	tmp = i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE | I2C_FUNC_SMBUS_BYTE_DATA);
+	if(!tmp)
+		goto err_out;
 
 	/* Get chip_id */
+	client_id = i2c_smbus_read_byte_data(client, R_BME280_CHIP_ID);
+	if(client_id != BME280_CHIP_ID){
+		printk(KERN_INFO "%s: Client ID (%x) does not match chip ID (%x)\n", 
+			DEVICE_NAME, client_id, BME280_CHIP_ID);
+		return tmp;
+	}
 
 	/* Get calibration parameters */
 
 	/* Set configuration */
 
 	/* Register char device */
+
+err_out:
+	return tmp;
 }
 
 static int __devexit bme280_remove(struct i2c_client *client){
