@@ -125,7 +125,7 @@ static int __init bme280_init(void){
 	if(tmp < 0){
 		printk(KERN_INFO "%s: I2C subsystem registration failed.\n", DEVICE_NAME);
 	}
-	printk(KERN_INFO "%s: Device successfully registered to I2C subsystem.\n", DEVICE_INFO);
+	printk(KERN_INFO "%s: Device successfully registered to I2C subsystem.\n", DEVICE_NAME);
 	return tmp;
 }
 
