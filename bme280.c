@@ -25,6 +25,9 @@
 #include <linux/module.h> 
 #include <linux/i2c.h>
 #include "bme280.h"
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+#include <linux/cdev.h>
 
 #define DEVICE_NAME "bme280"
 
@@ -93,6 +96,9 @@ static struct bme280_data_t bme280_data =
 					.cfg_data = &bme280_configuration
 					};
 
+static struct cdev bme280_cdev;
+static dev_t device_numbers;
+
 /* Helper functions definitions */
 static void bme280_get_calibration(struct bme280_calibration_t *calibration){
 
@@ -101,6 +107,26 @@ static void bme280_get_calibration(struct bme280_calibration_t *calibration){
 static void bme280_set_configuration(struct bme280_configuration_t *configuration){
 
 }
+
+/* Char device declarations */
+static int bme280_open(struct inode *inode, struct file *filp){
+	return 0;
+}
+
+static int bme280_release(struct inode *inode, struct file *filp){
+	return 0;
+}
+
+static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *ppos){
+	return count;
+}
+
+static struct file_operations fops = {
+		.owner = THIS_MODULE,
+		.read = bme280_read,
+		.open = bme280_open,
+		.release = bme280_release,
+};
 
 /*
  * When the device is probed this function performs the following actions:
@@ -128,6 +154,7 @@ static int bme280_probe(struct i2c_client *client, const struct i2c_device_id *i
 			DEVICE_NAME, client_id, BME280_CHIP_ID);
 		return tmp;
 	}
+	bme280_data.client = client;
 
 	/* Get calibration parameters */
 	bme280_get_calibration(bme280_data.cal_data);
@@ -136,14 +163,33 @@ static int bme280_probe(struct i2c_client *client, const struct i2c_device_id *i
 	bme280_set_configuration(bme280_data.cfg_data);
 
 	/* Register char device */
+	tmp = alloc_chrdev_region(&device_numbers, 0, 1, DEVICE_NAME);
+	if(tmp < 0){
+		printk(KERN_INFO "%s: Unable to register char device.\n", DEVICE_NAME);
+		return tmp;
+	}
 
+	/* Creating character device (cdev) "object" */
+	cdev_init(&bme280_cdev, &fops);
+	bme280_cdev.owner = THIS_MODULE;
+	bme280_cdev.ops = &fops;
+	tmp = cdev_add(&bme280_cdev, device_numbers, 1);
+	if(tmp){
+		printk(KERN_ALERT "%s: Unable to add cdev, with errno %d.\n", DEVICE_NAME, tmp);
+		goto err_out2;
+	}
+	
+	printk(KERN_INFO "%s: Probe executed successfully.\n", DEVICE_NAME);
 err_out:
+	return tmp;
+err_out2:
+	unregister_chrdev_region(device_numbers, 1);
 	return tmp;
 }
 
 static int bme280_remove(struct i2c_client *client){
 	/* Unregister char device */
-	
+	unregister_chrdev_region(device_numbers, 1);
 	return 0;
 }
 
