@@ -93,12 +93,43 @@ static dev_t device_numbers;
 
 /* Helper functions definitions */
 static void bme280_get_calibration(struct bme280_calibration_t *calibration){
-
+	
 }
 
-static void bme280_set_configuration(struct bme280_configuration_t *configuration){
+static int bme280_set_configuration(struct bme280_configuration_t *configuration){
+	int tmp;
 
+	/* Configure CTRL_HUM  */
+	tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CTRL_HUM, 
+			bme280_data.cfg_data->ctrl_hum);
+	if(tmp < 0){
+		printk(KERN_INFO "%s: Unable to write CTRL_HUM", DEVICE_NAME);
+		goto out;
+	}
+		
+	/* 
+	 * Configure CTRL_MEAS  
+	 * changes to CTRL_HUM become effective only after writing to CTRL_MEAS 
+	 * */
+	tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CTRL_MEAS,
+			bme280_data.cfg_data->ctrl_meas);
+	if(tmp < 0){
+		printk(KERN_INFO "%s: Unable to write CTRL_MEAS", DEVICE_NAME);
+		goto out;
+	}
+
+	/* Set CONFIG register */
+	tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CONFIG,
+			bme280_data.cfg_data->config);
+	if(tmp < 0){
+		printk(KERN_INFO "%s: Unable to write CONFIG", DEVICE_NAME);
+		goto out;
+	}
+
+out:
+	return tmp;
 }
+
 
 /* Char device declarations */
 static int bme280_open(struct inode *inode, struct file *filp){
