@@ -103,7 +103,7 @@ static int bme280_set_configuration(struct bme280_configuration_t *configuration
 	tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CTRL_HUM, 
 			bme280_data.cfg_data->ctrl_hum);
 	if(tmp < 0){
-		printk(KERN_INFO "%s: Unable to write CTRL_HUM", DEVICE_NAME);
+		printk(KERN_INFO "%s: Unable to write CTRL_HUM.\n", DEVICE_NAME);
 		goto out;
 	}
 		
@@ -114,7 +114,7 @@ static int bme280_set_configuration(struct bme280_configuration_t *configuration
 	tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CTRL_MEAS,
 			bme280_data.cfg_data->ctrl_meas);
 	if(tmp < 0){
-		printk(KERN_INFO "%s: Unable to write CTRL_MEAS", DEVICE_NAME);
+		printk(KERN_INFO "%s: Unable to write CTRL_MEAS.\n", DEVICE_NAME);
 		goto out;
 	}
 
@@ -122,7 +122,7 @@ static int bme280_set_configuration(struct bme280_configuration_t *configuration
 	tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CONFIG,
 			bme280_data.cfg_data->config);
 	if(tmp < 0){
-		printk(KERN_INFO "%s: Unable to write CONFIG", DEVICE_NAME);
+		printk(KERN_INFO "%s: Unable to write CONFIG.\n", DEVICE_NAME);
 		goto out;
 	}
 
@@ -173,7 +173,7 @@ static int bme280_probe(struct i2c_client *client, const struct i2c_device_id *i
 	/* Get chip_id */
 	client_id = i2c_smbus_read_byte_data(client, R_BME280_CHIP_ID);
 	if(client_id != BME280_CHIP_ID){
-		printk(KERN_INFO "%s: Client ID (%x) does not match chip ID (%x)\n", 
+		printk(KERN_INFO "%s: Client ID (%x) does not match chip ID (%x).\n", 
 			DEVICE_NAME, client_id, BME280_CHIP_ID);
 		goto err_out;
 	}
@@ -183,7 +183,11 @@ static int bme280_probe(struct i2c_client *client, const struct i2c_device_id *i
 	bme280_get_calibration(bme280_data.cal_data);
 
 	/* Set configuration */
-	bme280_set_configuration(bme280_data.cfg_data);
+	tmp = bme280_set_configuration(bme280_data.cfg_data);
+	if(tmp < 0){
+		printk(KERN_INFO "%s: Unable to configure device.\n", DEVICE_NAME);
+		goto err_out;
+	} 
 
 	/* Register char device */
 	tmp = alloc_chrdev_region(&device_numbers, 0, 1, DEVICE_NAME);
