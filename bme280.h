@@ -43,5 +43,14 @@
 #define BME280_CHIP_ID			0x60
 #define BME280_I2C_ADDR			0x77
 
+/* Configuration fields */
+#define CTRL_HUM_OSRS_H(x)		(x)			
+#define CTRL_MEAS_MODE(x)		(x)
+#define CTRL_MEAS_OSRS_P(x)		(x << 2)
+#define CTRL_MEAS_OSRS_T(x)		(x << 5)
+#define	CONFIG_T_SB(x)			(x << 5)
+#define CONFIG_FILTER(x)		(x << 2)
+#define CONFIG_SPI3W_EN(x)		(x)
+
 /* IOCTL Commands definitions */
 

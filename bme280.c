@@ -60,13 +60,9 @@ struct bme280_calibration_t{
 
 /* Structure that holds bme280 configuration */
 struct bme280_configuration_t{
-	unsigned char t_sb;
-	unsigned char filter;
-	unsigned char spi3w_en;
-	unsigned char osrs_t;
-	unsigned char osrs_p;
-	unsigned char mode;
-	unsigned char osrs_h;	
+	unsigned char ctrl_hum;
+	unsigned char ctrl_meas;
+	unsigned char config;	
 };
 
 /* Structure that holds configuration and client data for the device */
@@ -80,13 +76,9 @@ struct bme280_data_t{
 static struct bme280_calibration_t bme280_calibration;
 static struct bme280_configuration_t bme280_configuration =
 					{
-					.t_sb = 0,
-					.filter = 0,
-					.spi3w_en = 0,
-					.osrs_t = 1,
-					.osrs_p = 1,
-					.mode = 0,
-					.osrs_h = 1
+					.ctrl_hum = CTRL_HUM_OSRS_H(1),
+					.ctrl_meas = CTRL_MEAS_OSRS_T(1) | CTRL_MEAS_OSRS_P(1),
+					.config = 0
 					};
 struct i2c_client *bme280_client = NULL;
 static struct bme280_data_t bme280_data =
