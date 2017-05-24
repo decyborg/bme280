@@ -152,7 +152,7 @@ static int bme280_probe(struct i2c_client *client, const struct i2c_device_id *i
 	if(client_id != BME280_CHIP_ID){
 		printk(KERN_INFO "%s: Client ID (%x) does not match chip ID (%x)\n", 
 			DEVICE_NAME, client_id, BME280_CHIP_ID);
-		return tmp;
+		goto err_out;
 	}
 	bme280_data.client = client;
 
@@ -166,7 +166,7 @@ static int bme280_probe(struct i2c_client *client, const struct i2c_device_id *i
 	tmp = alloc_chrdev_region(&device_numbers, 0, 1, DEVICE_NAME);
 	if(tmp < 0){
 		printk(KERN_INFO "%s: Unable to register char device.\n", DEVICE_NAME);
-		return tmp;
+		goto err_out;
 	}
 
 	/* Creating character device (cdev) "object" */
