@@ -51,6 +51,13 @@
 #define	CONFIG_T_SB(x)			(x << 5)
 #define CONFIG_FILTER(x)		(x << 2)
 #define CONFIG_SPI3W_EN(x)		(x)
+#define STATUS_MEASURING_RUNNING	(1 << 3)
 
+/* Data readout size */
+#define DATA_READOUT_SIZE	8
+#if(DATA_READOUT_SIZE > I2C_SMBUS_BLOCK_MAX)
+#error "Data readout is greater than I2C_SMBUS_BLOCK_MAX."
+#endif
+#define MAX_STRING_SIZE		10
 /* IOCTL Commands definitions */
 

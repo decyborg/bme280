@@ -28,6 +28,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
+#include <linux/types.h>
 
 #define DEVICE_NAME "bme280"
 
@@ -141,7 +142,92 @@ static int bme280_release(struct inode *inode, struct file *filp){
 }
 
 static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *ppos){
-	return count;
+	int tmp, working_mode;
+	u32 i = 0;
+	u8 press_st[MAX_STRING_SIZE];
+	u8 temp_st[MAX_STRING_SIZE];
+	u8 hum_st[MAX_STRING_SIZE];
+	u8 final_st[MAX_STRING_SIZE * 3];
+	u32 press, temp;
+	u16 hum;
+	u8 data_readout[DATA_READOUT_SIZE];
+
+	/* Check working mode */
+	working_mode = i2c_smbus_read_byte_data(bme280_data.client, R_BME280_CTRL_MEAS);
+	if(working_mode < 0){
+		tmp = working_mode;
+		goto out;
+	}
+	
+	/* If in sleep mode we need to do a force read */
+	if((working_mode & 0b11) == 0){
+		tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CONFIG, 
+				(working_mode | 0b10));
+		if(tmp < 0){
+			goto out;
+		}
+	}
+
+	/* Check status flag */
+	do{
+		tmp = i2c_smbus_read_byte_data(bme280_data.client, R_BME280_STATUS);
+		if(tmp < 0){
+			goto out;
+		}
+	}while(tmp & STATUS_MEASURING_RUNNING);
+
+	/* 
+	 * Perform raw read, it is adviced to perform a burst read
+	 * from 0xF7 (PRESS_MSB) to 0xFE (HUM_LSB)
+	 * Use read byte instead of emulated block data read because 4.1 does not support emulated block read
+	 * */
+	while(i < DATA_READOUT_SIZE){
+		tmp = i2c_smbus_read_byte_data(bme280_data.client, R_BME280_PRESS_MSB + i);
+		if(tmp < 0){
+			goto out;
+		}
+		data_readout[i] = tmp;
+		i++;
+	}
+
+	/* Process raw data */
+	press = (data_readout[0] << 12) | (data_readout[1] << 4) | (data_readout[2] >> 4);
+	temp = (data_readout[3] << 12) | (data_readout[4] << 4) | (data_readout[5] >> 4);
+	hum = (data_readout[6] << 8) |  data_readout[7];
+
+	/* Compensate obtained results */
+	//TODO
+	
+	/* Form string */
+	/* Turn numeric values to strings */
+	tmp = snprintf(press_st, MAX_STRING_SIZE, "%d", press);
+	if(tmp >= MAX_STRING_SIZE){
+		printk(KERN_INFO "%s: Pressure string truncated", DEVICE_NAME);
+	}
+	
+	tmp = snprintf(temp_st, MAX_STRING_SIZE, "%d", temp);
+	if(tmp >= MAX_STRING_SIZE){
+		printk(KERN_INFO "%s: Temperature string truncated", DEVICE_NAME);
+	}
+	
+	tmp = snprintf(hum_st, MAX_STRING_SIZE, "%d", hum);
+	if(tmp >= MAX_STRING_SIZE){
+		printk(KERN_INFO "%s: Humidity string truncated", DEVICE_NAME);
+	}
+
+	/* Create string */
+	strcpy(final_st, "t");
+	strcat(final_st, temp_st);
+	strcat(final_st, "p");
+	strcat(final_st, press_st);
+	strcat(final_st, "h");
+	strcat(final_st, hum_st);
+
+	/* Copy from kernel space to user space */
+	tmp = copy_to_user(buf, final_st, strlen(final_st));
+
+out:
+	return tmp;
 }
 
 static struct file_operations fops = {
