@@ -88,7 +88,7 @@ static struct bme280_data_t bme280_data =
 					.cal_data = &bme280_calibration,
 					.cfg_data = &bme280_configuration
 					};
-
+static u8 read_flag = 0;
 static struct cdev bme280_cdev;
 static dev_t device_numbers;
 
@@ -134,10 +134,12 @@ out:
 
 /* Char device declarations */
 static int bme280_open(struct inode *inode, struct file *filp){
+	read_flag = 0;
 	return 0;
 }
 
 static int bme280_release(struct inode *inode, struct file *filp){
+	read_flag = 0;
 	return 0;
 }
 
@@ -151,6 +153,12 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 	u32 press, temp;
 	u16 hum;
 	u8 data_readout[DATA_READOUT_SIZE];
+	
+	/* Check if data was read already */
+	if(read_flag == 1){
+		read_flag = 0;
+		return 0;
+	}
 
 	/* Check working mode */
 	working_mode = i2c_smbus_read_byte_data(bme280_data.client, R_BME280_CTRL_MEAS);
@@ -179,7 +187,8 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 	/* 
 	 * Perform raw read, it is adviced to perform a burst read
 	 * from 0xF7 (PRESS_MSB) to 0xFE (HUM_LSB)
-	 * Use read byte instead of emulated block data read because 4.1 does not support emulated block read
+	 * Use read byte instead of emulated block data read because 4.1 
+	 * does not support emulated block read
 	 * */
 	while(i < DATA_READOUT_SIZE){
 		tmp = i2c_smbus_read_byte_data(bme280_data.client, R_BME280_PRESS_MSB + i);
@@ -225,7 +234,8 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 
 	/* Copy from kernel space to user space */
 	tmp = copy_to_user(buf, final_st, strlen(final_st));
-
+	read_flag = 1;
+	return strlen(final_st);
 out:
 	return tmp;
 }
