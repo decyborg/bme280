@@ -195,7 +195,7 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 		if(tmp < 0){
 			goto out;
 		}
-		data_readout[i] = tmp;
+		data_readout[i] =(u8) (tmp & 0xFF);
 		i++;
 	}
 
