@@ -169,7 +169,7 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 	
 	/* If in sleep mode we need to do a force read */
 	if((working_mode & 0b11) == 0){
-		tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CONFIG, 
+		tmp = i2c_smbus_write_byte_data(bme280_data.client, R_BME280_CTRL_MEAS, 
 				(working_mode | 0b10));
 		if(tmp < 0){
 			goto out;
