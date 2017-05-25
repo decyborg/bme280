@@ -59,5 +59,7 @@
 #error "Data readout is greater than I2C_SMBUS_BLOCK_MAX."
 #endif
 #define MAX_STRING_SIZE		10
+#define CALIBRATION_REG_SIZE_0	26
+#define CALIBRATION_REG_SIZE_26 16
 /* IOCTL Commands definitions */
 

@@ -93,8 +93,88 @@ static struct cdev bme280_cdev;
 static dev_t device_numbers;
 
 /* Helper functions definitions */
-static void bme280_get_calibration(struct bme280_calibration_t *calibration){
+/*
+ * This helper function is used to obtain the calibration
+ * parameters and populate the calibration structure
+ *
+ * parameter | Register address |   bit
+ * ----------|------------------|----------------
+ * dig_T1    |  0x88 and 0x89   | from 0 : 7 to 8: 15
+ * dig_T2    |  0x8A and 0x8B   | from 0 : 7 to 8: 15
+ * dig_T3    |  0x8C and 0x8D   | from 0 : 7 to 8: 15
+ * dig_P1    |  0x8E and 0x8F   | from 0 : 7 to 8: 15
+ * dig_P2    |  0x90 and 0x91   | from 0 : 7 to 8: 15
+ * dig_P3    |  0x92 and 0x93   | from 0 : 7 to 8: 15
+ * dig_P4    |  0x94 and 0x95   | from 0 : 7 to 8: 15
+ * dig_P5    |  0x96 and 0x97   | from 0 : 7 to 8: 15
+ * dig_P6    |  0x98 and 0x99   | from 0 : 7 to 8: 15
+ * dig_P7    |  0x9A and 0x9B   | from 0 : 7 to 8: 15
+ * dig_P8    |  0x9C and 0x9D   | from 0 : 7 to 8: 15
+ * dig_P9    |  0x9E and 0x9F   | from 0 : 7 to 8: 15
+ * dig_H1    |         0xA1     | from 0 to 7
+ * dig_H2    |  0xE1 and 0xE2   | from 0 : 7 to 8: 15
+ * dig_H3    |         0xE3     | from 0 to 7
+ * dig_H4    |0xE4 and 0xE5[3:0]| from 4 : 11 to 0: 3
+ * dig_H5    |0xE5[7:4] and 0xE6| from 0 : 3 to 4: 11
+ * dig_H6    |         0xE7     | from 0 to 7
+ * 
+ * */
+static int bme280_get_calibration(struct bme280_calibration_t *calibration){
+	u8 calib_data_0_25[CALIBRATION_REG_SIZE_0];
+	u8 calib_data_26_41[CALIBRATION_REG_SIZE_26];
+	s32 tmp;
+	u8 i = 0;
+
+	/* 
+	 * Read calibration data, the data is arranged in two chunks
+	 * from 0x88 (calib0) to 0xA1 (calib25) and 
+	 * from 0xE1 (calib26) to 0xF0 (calib41)
+	 * Use read byte instead of emulated block data read because 4.1 
+	 * does not support emulated block read
+	 * */
+	while(i < CALIBRATION_REG_SIZE_0){
+		tmp = i2c_smbus_read_byte_data(bme280_data.client, R_BME280_CALIB00 + i);
+		if(tmp < 0){
+			goto out;
+		}
+		calib_data_0_25[i] = (u8) (tmp & 0xFF);
+		i++;
+	}
+	i = 0;
+	while(i < CALIBRATION_REG_SIZE_26){
+		tmp = i2c_smbus_read_byte_data(bme280_data.client, R_BME280_CALIB26 + i);
+		if(tmp < 0){
+			goto out;
+		}
+		calib_data_26_41[i] = (u8) (tmp & 0xFF);
+		i++;
+	}
+
+	/* Fill calibration structure from obtained parameters */
+	bme280_data.cal_data->dig_T1 = (unsigned short)((calib_data_0_25[1] << 8) | calib_data_0_25[0]);
+	bme280_data.cal_data->dig_T2 = (short) ((calib_data_0_25[3] << 8) | calib_data_0_25[2]);	
+	bme280_data.cal_data->dig_T3 = (short) ((calib_data_0_25[5] << 8) | calib_data_0_25[4]);
+	bme280_data.cal_data->dig_P1 = (unsigned short) ((calib_data_0_25[7] << 8) | calib_data_0_25[6]);
+	bme280_data.cal_data->dig_P2 = (short) ((calib_data_0_25[9] << 8) | calib_data_0_25[8]);
+	bme280_data.cal_data->dig_P3 = (short) ((calib_data_0_25[11] << 8) | calib_data_0_25[10]);
+	bme280_data.cal_data->dig_P4 = (short) ((calib_data_0_25[13] << 8) | calib_data_0_25[12]);
+	bme280_data.cal_data->dig_P5 = (short) ((calib_data_0_25[15] << 8) | calib_data_0_25[14]);
+	bme280_data.cal_data->dig_P6 = (short) ((calib_data_0_25[17] << 8) | calib_data_0_25[16]);
+	bme280_data.cal_data->dig_P7 = (short) ((calib_data_0_25[19] << 8) | calib_data_0_25[18]);
+	bme280_data.cal_data->dig_P8 = (short) ((calib_data_0_25[21] << 8) | calib_data_0_25[20]);
+	bme280_data.cal_data->dig_P9 = (short) ((calib_data_0_25[23] << 8) | calib_data_0_25[22]);
+	bme280_data.cal_data->dig_H1 = calib_data_0_25[24];
+	bme280_data.cal_data->dig_H2 = (short) ((calib_data_26_41[1] << 8) | calib_data_26_41[0]);
+	bme280_data.cal_data->dig_H3 = calib_data_26_41[2];
+	bme280_data.cal_data->dig_H4 = (short) ((calib_data_26_41[4] & 0x0F ) | 
+			(calib_data_26_41[3] << 4));
+	bme280_data.cal_data->dig_H5 = (short) ((calib_data_26_41[5] << 4) | 
+			( (calib_data_26_41[4] & 0xF0) >> 4 ) );
+	bme280_data.cal_data->dig_H6 = (s8) calib_data_26_41[6];
 	
+	return 0;
+out:
+	return tmp;
 }
 
 static int bme280_set_configuration(struct bme280_configuration_t *configuration){
