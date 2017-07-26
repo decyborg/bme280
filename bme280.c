@@ -99,6 +99,16 @@ static dev_t device_numbers;
  * */
 static void bme280_calibrate_temp(u32 temp, u32 *cal_temp){
 
+	s32 tmp1, tmp2, fine;
+
+	tmp1 = ((((temp >> 3) - ((s32)bme280_calibration.dig_T1 << 1))) * 
+		((s32) bme280_calibration.dig_T2)) >> 11;
+	tmp2 = (((((temp >> 4) - ((s32)bme280_calibration.dig_T1)) * 
+		((temp >> 4) - ((s32)bme280_calibration.dig_T1))) >> 12) *
+		((s32)bme280_calibration.dig_T3)) >> 14;
+	fine = tmp1 + tmp2;
+	
+	*cal_temp = (fine * 5 + 128) >> 8; 
 }
 
 /*
@@ -257,7 +267,7 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 	u8 final_st[MAX_STRING_SIZE * 3];
 	u32 press, temp;
 	u16 hum;
-	u32 cal_temp, cal_hum, cal_press;
+	s32 cal_temp, cal_hum, cal_press;
 	u8 data_readout[DATA_READOUT_SIZE];
 	
 	/* Check if data was read already */
@@ -323,7 +333,7 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 		printk(KERN_INFO "%s: Pressure string truncated\n", DEVICE_NAME);
 	}
 	
-	tmp = snprintf(temp_st, MAX_STRING_SIZE, "%d", temp);
+	tmp = snprintf(temp_st, MAX_STRING_SIZE, "%d", cal_temp);
 	if(tmp >= MAX_STRING_SIZE){
 		printk(KERN_INFO "%s: Temperature string truncated\n", DEVICE_NAME);
 	}
