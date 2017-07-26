@@ -88,6 +88,7 @@ static struct bme280_data_t bme280_data =
 					.cal_data = &bme280_calibration,
 					.cfg_data = &bme280_configuration
 					};
+static s32 fine_cal = 0;
 static u8 read_flag = 0;
 static struct cdev bme280_cdev;
 static dev_t device_numbers;
@@ -99,16 +100,16 @@ static dev_t device_numbers;
  * */
 static void bme280_calibrate_temp(u32 temp, u32 *cal_temp){
 
-	s32 tmp1, tmp2, fine;
+	s32 tmp1, tmp2;
 
 	tmp1 = ((((temp >> 3) - ((s32)bme280_calibration.dig_T1 << 1))) * 
 		((s32) bme280_calibration.dig_T2)) >> 11;
 	tmp2 = (((((temp >> 4) - ((s32)bme280_calibration.dig_T1)) * 
 		((temp >> 4) - ((s32)bme280_calibration.dig_T1))) >> 12) *
 		((s32)bme280_calibration.dig_T3)) >> 14;
-	fine = tmp1 + tmp2;
+	fine_cal = tmp1 + tmp2;
 	
-	*cal_temp = (fine * 5 + 128) >> 8; 
+	*cal_temp = (fine_cal * 5 + 128) >> 8; 
 }
 
 /*
