@@ -92,6 +92,31 @@ static u8 read_flag = 0;
 static struct cdev bme280_cdev;
 static dev_t device_numbers;
 
+/* 
+ * Performs temperature calibration
+ *
+ *
+ * */
+static void bme280_calibrate_temp(u32 temp, u32 *cal_temp){
+
+}
+
+/*
+ * Performs humidity calibration
+ *
+ * */
+static void bme280_calibrate_hum(u16 hum, u32 *cal_hum){
+
+}
+
+/*
+ * Performs pressure calibration
+ *
+ * */
+static void bme280_calibrate_press(u32 press, u32 *cal_press){
+
+}
+
 /* Helper functions definitions */
 /*
  * This helper function is used to obtain the calibration
@@ -232,6 +257,7 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 	u8 final_st[MAX_STRING_SIZE * 3];
 	u32 press, temp;
 	u16 hum;
+	u32 cal_temp, cal_hum, cal_press;
 	u8 data_readout[DATA_READOUT_SIZE];
 	
 	/* Check if data was read already */
@@ -286,22 +312,25 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 
 	/* Compensate obtained results */
 	//TODO
-	
+	bme280_calibrate_temp(temp, &cal_temp);
+	bme280_calibrate_hum(hum, &cal_hum);
+	bme280_calibrate_press(press, &cal_press);
+
 	/* Form string */
 	/* Turn numeric values to strings */
 	tmp = snprintf(press_st, MAX_STRING_SIZE, "%d", press);
 	if(tmp >= MAX_STRING_SIZE){
-		printk(KERN_INFO "%s: Pressure string truncated", DEVICE_NAME);
+		printk(KERN_INFO "%s: Pressure string truncated\n", DEVICE_NAME);
 	}
 	
 	tmp = snprintf(temp_st, MAX_STRING_SIZE, "%d", temp);
 	if(tmp >= MAX_STRING_SIZE){
-		printk(KERN_INFO "%s: Temperature string truncated", DEVICE_NAME);
+		printk(KERN_INFO "%s: Temperature string truncated\n", DEVICE_NAME);
 	}
 	
 	tmp = snprintf(hum_st, MAX_STRING_SIZE, "%d", hum);
 	if(tmp >= MAX_STRING_SIZE){
-		printk(KERN_INFO "%s: Humidity string truncated", DEVICE_NAME);
+		printk(KERN_INFO "%s: Humidity string truncated\n", DEVICE_NAME);
 	}
 
 	/* Create string */
@@ -311,6 +340,7 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 	strcat(final_st, press_st);
 	strcat(final_st, "h");
 	strcat(final_st, hum_st);
+	strcat(final_st, "\n");
 
 	/* Copy from kernel space to user space */
 	tmp = copy_to_user(buf, final_st, strlen(final_st));
