@@ -116,8 +116,21 @@ static void bme280_calibrate_temp(u32 temp, u32 *cal_temp){
  * Performs humidity calibration
  *
  * */
-static void bme280_calibrate_hum(u16 hum, u32 *cal_hum){
+static void bme280_calibrate_hum(s32 hum, u32 *cal_hum){
 
+	s32 tmp1;
+
+	tmp1 = (fine_cal - ((s32)76800));
+	tmp1 = ((((hum << 14) - (((s32)bme280_calibration.dig_H4 << 20) -
+		(((s32)bme280_calibration.dig_H5) * tmp1)) +
+		((s32)16384)) >> 15) * (((((((tmp1 * ((s32)bme280_calibration.dig_H6)) >> 10) *
+		(((tmp1 * ((s32)bme280_calibration.dig_H3)) >> 11) + ((s32)32768))) >> 10) + 
+		((s32)2097152)) * ((s32)bme280_calibration.dig_H2) + 8192) >> 14));
+	tmp1 = (tmp1 - (((((tmp1 >> 15) * (tmp1 >> 15)) >> 7) *
+		(( s32)bme280_calibration.dig_H1)) >> 4));
+	tmp1 = (tmp1 < 0 ? 0 : tmp1);
+	tmp1 = (tmp1 > 419430400 ? 419430400 : tmp1);
+	*cal_hum = (u32)(tmp1 >> 12);
 }
 
 /*
@@ -339,7 +352,7 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 		printk(KERN_INFO "%s: Temperature string truncated\n", DEVICE_NAME);
 	}
 	
-	tmp = snprintf(hum_st, MAX_STRING_SIZE, "%d", hum);
+	tmp = snprintf(hum_st, MAX_STRING_SIZE, "%d", cal_hum);
 	if(tmp >= MAX_STRING_SIZE){
 		printk(KERN_INFO "%s: Humidity string truncated\n", DEVICE_NAME);
 	}
