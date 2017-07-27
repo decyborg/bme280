@@ -29,6 +29,7 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/types.h>
+#include <asm/div64.h>
 
 #define DEVICE_NAME "bme280"
 
@@ -138,7 +139,27 @@ static void bme280_calibrate_hum(s32 hum, u32 *cal_hum){
  *
  * */
 static void bme280_calibrate_press(u32 press, u32 *cal_press){
+	
+	s64 tmp1, tmp2, tmp3, tmp4;
 
+	tmp1 = fine_cal - 128000;
+	tmp2 = tmp1 * tmp1 * (s64)bme280_calibration.dig_P6;
+	tmp2 = tmp2 + ((tmp1 * (s64)bme280_calibration.dig_P5) << 17);
+	tmp2 = tmp2 + (((s64)bme280_calibration.dig_P4) << 35);
+	tmp1 = ((tmp1 * tmp1 * (s64)bme280_calibration.dig_P3) >> 8) + 
+		((tmp1 * (s64)bme280_calibration.dig_P2) << 12);
+	tmp1 = (((((s64)1) << 47) + tmp1)) * ((s64)bme280_calibration.dig_P1) >> 33;
+	if(tmp1 == 0){
+		*cal_press = 0;
+		return;	/* Avoid exception caused by division by zero */
+	}
+	tmp3 = 1048576 - press;
+	tmp3 = (((tmp3 << 31) - tmp2) * 3125);
+	tmp4 = do_div(tmp3, tmp1);
+	tmp1 = (((s64)bme280_calibration.dig_P9) * (tmp3 >> 13) * (tmp3 >> 13)) >> 25;
+	tmp2 = (((s64)bme280_calibration.dig_P8) * tmp3) >> 19;
+	tmp3 = ((tmp3 + tmp1 + tmp2) >> 8) + (((s64)bme280_calibration.dig_P7) << 4);
+	*cal_press = (u32)tmp3;
 }
 
 /* Helper functions definitions */
@@ -334,15 +355,19 @@ static ssize_t bme280_read(struct file *filp, char *buf, size_t count, loff_t *p
 	temp = (data_readout[3] << 12) | (data_readout[4] << 4) | (data_readout[5] >> 4);
 	hum = (data_readout[6] << 8) |  data_readout[7];
 
-	/* Compensate obtained results */
-	//TODO
+	/* Compensate obtained results
+	 *
+	 * Temperature must be compensated first, a value that is required
+	 * by the other parameters is calculated by the temperature 
+	 * calbration routine.
+	 * */
 	bme280_calibrate_temp(temp, &cal_temp);
 	bme280_calibrate_hum(hum, &cal_hum);
 	bme280_calibrate_press(press, &cal_press);
 
 	/* Form string */
 	/* Turn numeric values to strings */
-	tmp = snprintf(press_st, MAX_STRING_SIZE, "%d", press);
+	tmp = snprintf(press_st, MAX_STRING_SIZE, "%d", cal_press);
 	if(tmp >= MAX_STRING_SIZE){
 		printk(KERN_INFO "%s: Pressure string truncated\n", DEVICE_NAME);
 	}
